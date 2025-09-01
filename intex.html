@@ -1,0 +1,398 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyShare - Make Your Work Easy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .drag-area {
+            border: 2px dashed #667eea;
+            border-radius: 12px;
+            padding: 40px;
+            transition: all 0.3s ease;
+        }
+        .drag-area.active {
+            border-color: #764ba2;
+            background-color: rgba(118, 75, 162, 0.05);
+        }
+        .download-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        .download-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .file-icon {
+            font-size: 3rem;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50">
+    <!-- Header -->
+    <header class="gradient-bg text-white py-8">
+        <div class="container mx-auto px-4 text-center">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4">
+                <i class="fas fa-share-alt mr-3"></i>EasyShare
+            </h1>
+            <p class="text-xl opacity-90">Share files effortlessly with anyone, anywhere</p>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-12">
+        <!-- Upload Section -->
+        <div class="max-w-4xl mx-auto mb-16">
+            <div class="bg-white rounded-2xl shadow-xl p-8 card-hover">
+                <h2 class="text-3xl font-bold text-center mb-8 text-gray-800">
+                    <i class="fas fa-cloud-upload-alt mr-3 text-purple-600"></i>
+                    Upload Your File
+                </h2>
+                
+                <div class="drag-area" id="dragArea">
+                    <div class="text-center">
+                        <i class="fas fa-file-upload file-icon mb-4"></i>
+                        <p class="text-xl text-gray-600 mb-4">Drag & Drop your file here</p>
+                        <p class="text-gray-500 mb-6">or</p>
+                        <input type="file" id="fileInput" class="hidden" multiple>
+                        <label for="fileInput" class="bg-purple-600 text-white px-8 py-3 rounded-full cursor-pointer hover:bg-purple-700 transition-colors">
+                            <i class="fas fa-folder-open mr-2"></i>Choose Files
+                        </label>
+                    </div>
+                </div>
+
+                <div id="fileList" class="mt-6 hidden">
+                    <h3 class="text-lg font-semibold mb-4">Selected Files:</h3>
+                    <ul id="selectedFiles" class="space-y-2"></ul>
+                </div>
+
+                <div class="text-center mt-8">
+                    <button id="generateLinkBtn" class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-full font-semibold hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105">
+                        <i class="fas fa-link mr-2"></i>Generate Shareable Link
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Share Link Section -->
+        <div id="shareSection" class="max-w-4xl mx-auto mb-16 hidden fade-in">
+            <div class="bg-white rounded-2xl shadow-xl p-8 card-hover">
+                <h2 class="text-3xl font-bold text-center mb-6 text-gray-800">
+                    <i class="fas fa-share-square mr-3 text-green-600"></i>
+                    Your Shareable Link
+                </h2>
+                
+                <div class="bg-gray-100 p-4 rounded-lg mb-6">
+                    <div class="flex items-center">
+                        <input type="text" id="shareLink" readonly class="flex-1 bg-transparent border-none outline-none text-gray-700 font-mono text-sm" placeholder="Link will appear here...">
+                        <button onclick="copyLink()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition-colors ml-2">
+                            <i class="fas fa-copy mr-2"></i>Copy
+                        </button>
+                    </div>
+                </div>
+
+                <div class="text-center">
+                    <p class="text-gray-600 mb-4">Share this link with anyone to download your file</p>
+                    <div class="flex justify-center space-x-4">
+                        <button onclick="shareWhatsApp()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 transition-colors">
+                            <i class="fab fa-whatsapp mr-2"></i>WhatsApp
+                        </button>
+                        <button onclick="shareEmail()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors">
+                            <i class="fas fa-envelope mr-2"></i>Email
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Download Section -->
+        <div class="max-w-4xl mx-auto">
+            <div class="bg-white rounded-2xl shadow-xl p-8 card-hover">
+                <h2 class="text-3xl font-bold text-center mb-8 text-gray-800">
+                    <i class="fas fa-download mr-3 text-blue-600"></i>
+                    Download Files
+                </h2>
+                
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Paste your download link:</label>
+                    <div class="flex">
+                        <input type="text" id="downloadLink" placeholder="https://easyshare.com/your-link" class="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button onclick="handleDownload()" class="download-btn text-white px-6 py-3 rounded-r-lg font-semibold">
+                            <i class="fas fa-download mr-2"></i>Download
+                        </button>
+                    </div>
+                </div>
+
+                <div id="downloadInfo" class="hidden bg-blue-50 p-4 rounded-lg mb-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-info-circle text-blue-600 mr-3"></i>
+                        <p class="text-blue-800">Ready to download your file!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions Section -->
+        <div class="max-w-4xl mx-auto mt-16">
+            <div class="bg-white rounded-2xl shadow-xl p-8">
+                <h2 class="text-3xl font-bold text-center mb-8 text-gray-800">
+                    <i class="fas fa-question-circle mr-3 text-orange-600"></i>
+                    How It Works
+                </h2>
+                
+                <div class="grid md:grid-cols-3 gap-6">
+                    <div class="text-center p-6 bg-gray-50 rounded-lg">
+                        <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-upload text-purple-600 text-2xl"></i>
+                        </div>
+                        <h3 class="font-semibold mb-2">1. Upload File</h3>
+                        <p class="text-gray-600">Select your file or drag & drop it onto the upload area</p>
+                    </div>
+                    
+                    <div class="text-center p-6 bg-gray-50 rounded-lg">
+                        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-share-alt text-blue-600 text-2xl"></i>
+                        </div>
+                        <h3 class="font-semibold mb-2">2. Get Link</h3>
+                        <p class="text-gray-600">Generate a unique shareable link for your file</p>
+                    </div>
+                    
+                    <div class="text-center p-6 bg-gray-50 rounded-lg">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-download text-green-600 text-2xl"></i>
+                        </div>
+                        <h3 class="font-semibold mb-2">3. Share & Download</h3>
+                        <p class="text-gray-600">Share the link and others can download instantly</p>
+                    </div>
+                </div>
+
+                <div class="mt-8 p-6 bg-yellow-50 rounded-lg">
+                    <h3 class="font-semibold text-yellow-800 mb-3">
+                        <i class="fas fa-lightbulb mr-2"></i>Important Notes:
+                    </h3>
+                    <ul class="list-disc list-inside text-yellow-700 space-y-1">
+                        <li>Files are stored temporarily (24 hours)</li>
+                        <li>Maximum file size: 100MB per file</li>
+                        <li>Supports all common file types</li>
+                        <li>100% secure and encrypted transfers</li>
+                        <li>No registration required</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="gradient-bg text-white py-12 mt-16">
+        <div class="container mx-auto px-4 text-center">
+            <div class="mb-6">
+                <h3 class="text-2xl font-bold mb-2">EasyShare</h3>
+                <p class="opacity-90">Make your work easy with seamless file sharing</p>
+            </div>
+            
+            <div class="flex justify-center space-x-6 mb-6">
+                <a href="#" class="text-white hover:text-blue-200 transition-colors">
+                    <i class="fab fa-facebook text-2xl"></i>
+                </a>
+                <a href="#" class="text-white hover:text-blue-400 transition-colors">
+                    <i class="fab fa-twitter text-2xl"></i>
+                </a>
+                <a href="#" class="text-white hover:text-pink-500 transition-colors">
+                    <i class="fab fa-instagram text-2xl"></i>
+                </a>
+            </div>
+            
+            <div class="border-t border-white/20 pt-6">
+                <p>&copy; 2025 Website by Wahab. All rights reserved.</p>
+                <p class="mt-2 opacity-80">Make your work easy - Share files without complications</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // DOM Elements
+        const dragArea = document.getElementById('dragArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const selectedFiles = document.getElementById('selectedFiles');
+        const generateLinkBtn = document.getElementById('generateLinkBtn');
+        const shareSection = document.getElementById('shareSection');
+        const shareLink = document.getElementById('shareLink');
+        const downloadLink = document.getElementById('downloadLink');
+        const downloadInfo = document.getElementById('downloadInfo');
+
+        let uploadedFiles = [];
+
+        // Drag and drop functionality
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dragArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dragArea.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dragArea.addEventListener(eventName, unhighlight, false);
+        });
+
+        function highlight() {
+            dragArea.classList.add('active');
+        }
+
+        function unhighlight() {
+            dragArea.classList.remove('active');
+        }
+
+        dragArea.addEventListener('drop', handleDrop, false);
+        fileInput.addEventListener('change', handleFileSelect, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            handleFiles(files);
+        }
+
+        function handleFiles(files) {
+            uploadedFiles = Array.from(files);
+            updateFileList();
+        }
+
+        function updateFileList() {
+            selectedFiles.innerHTML = '';
+            uploadedFiles.forEach((file, index) => {
+                const li = document.createElement('li');
+                li.className = 'flex items-center justify-between bg-gray-50 p-3 rounded';
+                li.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fas fa-file text-blue-600 mr-3"></i>
+                        <span class="text-sm">${file.name}</span>
+                        <span class="text-xs text-gray-500 ml-2">(${formatFileSize(file.size)})</span>
+                    </div>
+                    <button onclick="removeFile(${index})" class="text-red-500 hover:text-red-700">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                selectedFiles.appendChild(li);
+            });
+            
+            fileList.classList.toggle('hidden', uploadedFiles.length === 0);
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function removeFile(index) {
+            uploadedFiles.splice(index, 1);
+            updateFileList();
+        }
+
+        // Generate shareable link
+        generateLinkBtn.addEventListener('click', generateLink);
+
+        function generateLink() {
+            if (uploadedFiles.length === 0) {
+                alert('Please select at least one file first!');
+                return;
+            }
+
+            // Simulate generating a unique link (in real app, this would call a backend)
+            const uniqueId = Math.random().toString(36).substr(2, 9);
+            const link = `https://easyshare.com/download/${uniqueId}`;
+            
+            shareLink.value = link;
+            shareSection.classList.remove('hidden');
+            
+            // Scroll to share section
+            shareSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function copyLink() {
+            shareLink.select();
+            document.execCommand('copy');
+            alert('Link copied to clipboard!');
+        }
+
+        function shareWhatsApp() {
+            const text = `Check out this file: ${shareLink.value}`;
+            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+        }
+
+        function shareEmail() {
+            const subject = 'File shared via EasyShare';
+            const body = `I've shared a file with you: ${shareLink.value}`;
+            window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
+        }
+
+        // Download functionality
+        function handleDownload() {
+            const link = downloadLink.value.trim();
+            
+            if (!link) {
+                alert('Please enter a download link');
+                return;
+            }
+
+            if (!link.startsWith('https://easyshare.com/')) {
+                alert('Please enter a valid EasyShare download link');
+                return;
+            }
+
+            // Simulate download process
+            downloadInfo.classList.remove('hidden');
+            
+            setTimeout(() => {
+                alert('Download started! In a real application, this would trigger the actual file download.');
+                downloadInfo.classList.add('hidden');
+                downloadLink.value = '';
+            }, 2000);
+        }
+
+        // Add some animations
+        document.addEventListener('DOMContentLoaded', function() {
+            const elements = document.querySelectorAll('.card-hover');
+            elements.forEach((el, index) => {
+                setTimeout(() => {
+                    el.classList.add('fade-in');
+                }, index * 200);
+            });
+        });
+    </script>
+</body>
+</html>
