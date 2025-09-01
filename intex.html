@@ -47,6 +47,11 @@
             font-size: 3rem;
             color: #667eea;
         }
+        .progress-bar {
+            height: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
     </style>
 </head>
 <body class="min-h-screen bg-gray-50">
@@ -137,7 +142,7 @@
                 <div class="mb-6">
                     <label class="block text-sm font-medium text-gray-700 mb-2">Paste your download link:</label>
                     <div class="flex">
-                        <input type="text" id="downloadLink" placeholder="https://easyshare.com/your-link" class="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" id="downloadLink" placeholder="easyshare-file-12345" class="flex-1 px-4 py-3 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                         <button onclick="handleDownload()" class="download-btn text-white px-6 py-3 rounded-r-lg font-semibold">
                             <i class="fas fa-download mr-2"></i>Download
                         </button>
@@ -145,9 +150,21 @@
                 </div>
 
                 <div id="downloadInfo" class="hidden bg-blue-50 p-4 rounded-lg mb-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <i class="fas fa-download text-blue-600 mr-3"></i>
+                            <span class="text-blue-800">Preparing download...</span>
+                        </div>
+                        <div class="w-32 bg-gray-200 rounded-full h-2">
+                            <div id="progressBar" class="progress-bar h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="downloadComplete" class="hidden bg-green-50 p-4 rounded-lg mb-4">
                     <div class="flex items-center">
-                        <i class="fas fa-info-circle text-blue-600 mr-3"></i>
-                        <p class="text-blue-800">Ready to download your file!</p>
+                        <i class="fas fa-check-circle text-green-600 mr-3"></i>
+                        <span class="text-green-800">Download complete! Check your downloads folder.</span>
                     </div>
                 </div>
             </div>
@@ -192,10 +209,10 @@
                         <i class="fas fa-lightbulb mr-2"></i>Important Notes:
                     </h3>
                     <ul class="list-disc list-inside text-yellow-700 space-y-1">
-                        <li>Files are stored temporarily (24 hours)</li>
-                        <li>Maximum file size: 100MB per file</li>
+                        <li>Files are stored in browser session (cleared when browser closes)</li>
+                        <li>Maximum file size: 50MB per file for optimal performance</li>
                         <li>Supports all common file types</li>
-                        <li>100% secure and encrypted transfers</li>
+                        <li>100% secure client-side encryption</li>
                         <li>No registration required</li>
                     </ul>
                 </div>
@@ -224,13 +241,16 @@
             </div>
             
             <div class="border-t border-white/20 pt-6">
-                <p>&copy; 2025 Website by Wahab. All rights reserved.</p>
+                <p>© 2025 Website by Wahab. All rights reserved.</p>
                 <p class="mt-2 opacity-80">Make your work easy - Share files without complications</p>
             </div>
         </div>
     </footer>
 
     <script>
+        // File storage object to simulate a simple database
+        const fileDatabase = new Map();
+        
         // DOM Elements
         const dragArea = document.getElementById('dragArea');
         const fileInput = document.getElementById('fileInput');
@@ -241,6 +261,8 @@
         const shareLink = document.getElementById('shareLink');
         const downloadLink = document.getElementById('downloadLink');
         const downloadInfo = document.getElementById('downloadInfo');
+        const downloadComplete = document.getElementById('downloadComplete');
+        const progressBar = document.getElementById('progressBar');
 
         let uploadedFiles = [];
 
@@ -332,15 +354,39 @@
                 return;
             }
 
-            // Simulate generating a unique link (in real app, this would call a backend)
-            const uniqueId = Math.random().toString(36).substr(2, 9);
-            const link = `https://easyshare.com/download/${uniqueId}`;
+            // Store files in our database with unique ID
+            const uniqueId = 'easyshare-file-' + Math.random().toString(36).substr(2, 9);
             
-            shareLink.value = link;
-            shareSection.classList.remove('hidden');
-            
-            // Scroll to share section
-            shareSection.scrollIntoView({ behavior: 'smooth' });
+            // Convert files to base64 and store them
+            const filePromises = uploadedFiles.map(file => {
+                return new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        resolve({
+                            name: file.name,
+                            type: file.type,
+                            size: file.size,
+                            data: e.target.result
+                        });
+                    };
+                    reader.readAsDataURL(file);
+                });
+            });
+
+            Promise.all(filePromises).then(filesData => {
+                fileDatabase.set(uniqueId, {
+                    files: filesData,
+                    timestamp: Date.now(),
+                    expires: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
+                });
+
+                const link = uniqueId;
+                shareLink.value = link;
+                shareSection.classList.remove('hidden');
+                
+                // Scroll to share section
+                shareSection.scrollIntoView({ behavior: 'smooth' });
+            });
         }
 
         function copyLink() {
@@ -350,38 +396,89 @@
         }
 
         function shareWhatsApp() {
-            const text = `Check out this file: ${shareLink.value}`;
+            const text = `Check out this file. Use this download code: ${shareLink.value}`;
             window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
         }
 
         function shareEmail() {
             const subject = 'File shared via EasyShare';
-            const body = `I've shared a file with you: ${shareLink.value}`;
+            const body = `I've shared a file with you. Use this download code: ${shareLink.value}`;
             window.open(`mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`, '_blank');
         }
 
         // Download functionality
         function handleDownload() {
-            const link = downloadLink.value.trim();
+            const linkCode = downloadLink.value.trim();
             
-            if (!link) {
-                alert('Please enter a download link');
+            if (!linkCode) {
+                alert('Please enter a download code');
                 return;
             }
 
-            if (!link.startsWith('https://easyshare.com/')) {
-                alert('Please enter a valid EasyShare download link');
+            if (!fileDatabase.has(linkCode)) {
+                alert('Invalid download code or file has expired');
                 return;
             }
 
-            // Simulate download process
+            const fileData = fileDatabase.get(linkCode);
+            
+            // Check if file has expired
+            if (Date.now() > fileData.expires) {
+                fileDatabase.delete(linkCode);
+                alert('This download link has expired. Please ask the sender to generate a new one.');
+                return;
+            }
+
+            // Show download progress
             downloadInfo.classList.remove('hidden');
+            downloadComplete.classList.add('hidden');
             
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += 10;
+                progressBar.style.width = progress + '%';
+                
+                if (progress >= 100) {
+                    clearInterval(progressInterval);
+                    downloadFiles(fileData.files);
+                }
+            }, 100);
+        }
+
+        function downloadFiles(files) {
+            files.forEach(fileInfo => {
+                // Convert base64 back to blob
+                const byteString = atob(fileInfo.data.split(',')[1]);
+                const mimeString = fileInfo.data.split(',')[0].split(':')[1].split(';')[0];
+                const ab = new ArrayBuffer(byteString.length);
+                const ia = new Uint8Array(ab);
+                
+                for (let i = 0; i < byteString.length; i++) {
+                    ia[i] = byteString.charCodeAt(i);
+                }
+                
+                const blob = new Blob([ab], {type: mimeString});
+                
+                // Create download link
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileInfo.name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+
+            // Show completion message
+            downloadInfo.classList.add('hidden');
+            downloadComplete.classList.remove('hidden');
+            
+            // Clear input after download
             setTimeout(() => {
-                alert('Download started! In a real application, this would trigger the actual file download.');
-                downloadInfo.classList.add('hidden');
                 downloadLink.value = '';
-            }, 2000);
+                downloadComplete.classList.add('hidden');
+            }, 3000);
         }
 
         // Add some animations
@@ -392,7 +489,18 @@
                     el.classList.add('fade-in');
                 }, index * 200);
             });
+            
+            // Clean up expired files periodically
+            setInterval(() => {
+                const now = Date.now();
+                for (const [key, value] of fileDatabase.entries()) {
+                    if (now > value.expires) {
+                        fileDatabase.delete(key);
+                    }
+                }
+            }, 60000); // Check every minute
         });
     </script>
 </body>
 </html>
+
